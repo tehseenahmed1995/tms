@@ -184,15 +184,33 @@ class TranslationExportControllerTest extends TestCase
             ->assertJsonValidationErrors(['locale']);
     }
 
-    public function test_export_validates_tags_is_array(): void
+    public function test_export_accepts_comma_separated_tags(): void
     {
-        $response = $this->getJson('/api/translations/export?locale=en&tags=invalid');
+        Translation::factory()->create(['key' => 'test.key', 'locale' => 'en', 'content' => 'Test']);
 
-        $response->assertStatus(422)
-            ->assertJsonValidationErrors(['tags']);
+        $response = $this->getJson('/api/translations/export?locale=en&tags=web,mobile');
+
+        $response->assertStatus(200);
     }
 
-    public function test_export_validates_nested_is_boolean(): void
+    public function test_export_accepts_string_boolean_for_nested(): void
+    {
+        Translation::factory()->create(['key' => 'test.key', 'locale' => 'en', 'content' => 'Test']);
+
+        $response = $this->getJson('/api/translations/export?locale=en&nested=true');
+        $response->assertStatus(200);
+
+        $response = $this->getJson('/api/translations/export?locale=en&nested=false');
+        $response->assertStatus(200);
+
+        $response = $this->getJson('/api/translations/export?locale=en&nested=1');
+        $response->assertStatus(200);
+
+        $response = $this->getJson('/api/translations/export?locale=en&nested=0');
+        $response->assertStatus(200);
+    }
+
+    public function test_export_validates_invalid_nested_value(): void
     {
         $response = $this->getJson('/api/translations/export?locale=en&nested=invalid');
 

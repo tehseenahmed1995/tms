@@ -15,6 +15,19 @@ class SearchTranslationRequest extends FormRequest
     }
 
     /**
+     * Prepare the data for validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        // Normalize tags parameter: convert comma-separated string to array
+        if ($this->has('tags') && is_string($this->input('tags'))) {
+            $this->merge([
+                'tags' => array_filter(array_map('trim', explode(',', $this->input('tags'))))
+            ]);
+        }
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>

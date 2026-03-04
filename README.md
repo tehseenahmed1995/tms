@@ -132,12 +132,20 @@ curl -X POST http://localhost:8000/api/translations \
 
 **Search (Public):**
 ```bash
-curl "http://localhost:8000/api/translations/search?locale=en&tags[]=web"
+# Search with comma-separated tags
+curl "http://localhost:8000/api/translations/search?locale=en&tags=web,mobile"
+
+# Or use array format
+curl "http://localhost:8000/api/translations/search?locale=en&tags[]=web&tags[]=mobile"
 ```
 
 **Export for Frontend (Public):**
 ```bash
-curl "http://localhost:8000/api/translations/export?locale=en&nested=true"
+# Export with comma-separated tags and nested structure
+curl "http://localhost:8000/api/translations/export?locale=en&tags=web,mobile&nested=true"
+
+# Export flat structure
+curl "http://localhost:8000/api/translations/export?locale=en&nested=false"
 ```
 
 **List Tags (Public):**
@@ -148,6 +156,15 @@ curl http://localhost:8000/api/tags
 ### OpenAPI/Swagger Documentation
 
 Complete API documentation is available in `openapi.yaml` (OpenAPI 3.0.3 format).
+
+#### Query Parameter Formats
+
+When using GET endpoints with array parameters (like `tags`), you can use either format:
+
+- **Comma-separated** (recommended for Postman/browser): `tags=web,mobile`
+- **Array format**: `tags[]=web&tags[]=mobile`
+
+For boolean parameters like `nested`, use string values: `nested=true` or `nested=false`
 
 **View Interactive Documentation:**
 
