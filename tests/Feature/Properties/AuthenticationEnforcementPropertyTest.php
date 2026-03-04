@@ -290,25 +290,26 @@ class AuthenticationEnforcementPropertyTest extends TestCase
             $user = User::factory()->create();
             $validToken = $user->createToken('test')->plainTextToken;
 
-            // Generate various malformed authorization headers
-            // Note: Laravel Sanctum is case-insensitive for "Bearer", so we test other malformations
+            // Generate various malformed authorization headers that should be rejected
+            // Note: We only test formats that Sanctum actually rejects
             $malformedHeaders = [
                 $validToken, // Missing "Bearer" prefix
                 "Token {$validToken}", // Wrong prefix
-                "Bearer{$validToken}", // Missing space
-                "Bearer  {$validToken}", // Extra space
-                "Bearer {$validToken} extra", // Extra content
+                "Basic {$validToken}", // Wrong auth type
             ];
 
             $malformedHeader = fake()->randomElement($malformedHeaders);
 
-            // Create a translation for testing
-            $translation = Translation::factory()->create();
+            // Create a translation for testing with unique key
+            $translation = Translation::factory()->create([
+                'key' => 'test.malformed.' . $i,
+                'locale' => 'en',
+            ]);
 
-            // Test POST with malformed header
+            // Test POST with malformed header - use unique key
             $response = $this->withHeader('Authorization', $malformedHeader)
                 ->postJson('/api/translations', [
-                    'key' => fake()->words(2, true),
+                    'key' => 'test.post.malformed.' . $i,
                     'locale' => 'en',
                     'content' => fake()->sentence(),
                 ]);

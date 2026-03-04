@@ -126,23 +126,31 @@ class TokenRevocationPropertyTest extends TestCase
         
         $this->assertEquals(0, $user1->fresh()->tokens()->count());
 
-        // Test revocation after multiple uses
+        // Test revocation after multiple uses - use separate test instance
         $user2 = User::factory()->create();
         $token2 = $user2->createToken('used-multiple-times')->plainTextToken;
         
         // Use the token multiple times
         for ($i = 0; $i < 5; $i++) {
-            $this->withHeader('Authorization', "Bearer {$token2}")
-                ->getJson('/api/auth/validate')
-                ->assertStatus(200);
+            $response = $this->withHeader('Authorization', "Bearer {$token2}")
+                ->getJson('/api/auth/validate');
+            $response->assertStatus(200);
         }
         
-        // Now revoke it
-        $this->withHeader('Authorization', "Bearer {$token2}")
-            ->postJson('/api/auth/logout')
-            ->assertStatus(200);
+        // Clear any cached authentication state
+        $this->app->forgetInstance('auth');
         
+        // Now revoke it
+        $response = $this->withHeader('Authorization', "Bearer {$token2}")
+            ->postJson('/api/auth/logout');
+        $response->assertStatus(200);
+        
+        // Verify token is deleted from database
         $this->assertEquals(0, $user2->fresh()->tokens()->count());
+        $this->assertDatabaseMissing('personal_access_tokens', [
+            'tokenable_id' => $user2->id,
+            'name' => 'used-multiple-times',
+        ]);
     }
 
     /**
@@ -190,28 +198,36 @@ class TokenRevocationPropertyTest extends TestCase
         $this->assertEquals(4, $user->tokens()->count());
 
         // Revoke token 2
-        $this->withHeader('Authorization', "Bearer {$tokens['token2']}")
-            ->postJson('/api/auth/logout')
-            ->assertStatus(200);
+        $this->app->forgetInstance('auth');
+        $response = $this->withHeader('Authorization', "Bearer {$tokens['token2']}")
+            ->postJson('/api/auth/logout');
+        $response->assertStatus(200);
         $this->assertEquals(3, $user->fresh()->tokens()->count());
+        $this->assertDatabaseMissing('personal_access_tokens', ['tokenable_id' => $user->id, 'name' => 'device-2']);
 
         // Revoke token 4
-        $this->withHeader('Authorization', "Bearer {$tokens['token4']}")
-            ->postJson('/api/auth/logout')
-            ->assertStatus(200);
+        $this->app->forgetInstance('auth');
+        $response = $this->withHeader('Authorization', "Bearer {$tokens['token4']}")
+            ->postJson('/api/auth/logout');
+        $response->assertStatus(200);
         $this->assertEquals(2, $user->fresh()->tokens()->count());
+        $this->assertDatabaseMissing('personal_access_tokens', ['tokenable_id' => $user->id, 'name' => 'device-4']);
 
         // Revoke token 1
-        $this->withHeader('Authorization', "Bearer {$tokens['token1']}")
-            ->postJson('/api/auth/logout')
-            ->assertStatus(200);
+        $this->app->forgetInstance('auth');
+        $response = $this->withHeader('Authorization', "Bearer {$tokens['token1']}")
+            ->postJson('/api/auth/logout');
+        $response->assertStatus(200);
         $this->assertEquals(1, $user->fresh()->tokens()->count());
+        $this->assertDatabaseMissing('personal_access_tokens', ['tokenable_id' => $user->id, 'name' => 'device-1']);
 
         // Revoke token 3
-        $this->withHeader('Authorization', "Bearer {$tokens['token3']}")
-            ->postJson('/api/auth/logout')
-            ->assertStatus(200);
+        $this->app->forgetInstance('auth');
+        $response = $this->withHeader('Authorization', "Bearer {$tokens['token3']}")
+            ->postJson('/api/auth/logout');
+        $response->assertStatus(200);
         $this->assertEquals(0, $user->fresh()->tokens()->count());
+        $this->assertDatabaseMissing('personal_access_tokens', ['tokenable_id' => $user->id, 'name' => 'device-3']);
     }
 
     /**
@@ -240,12 +256,16 @@ class TokenRevocationPropertyTest extends TestCase
                 'name' => $deviceName,
             ]);
 
+            // Clear auth cache
+            $this->app->forgetInstance('auth');
+            
             // Revoke the token
-            $this->withHeader('Authorization', "Bearer {$token}")
-                ->postJson('/api/auth/logout')
-                ->assertStatus(200);
+            $response = $this->withHeader('Authorization', "Bearer {$token}")
+                ->postJson('/api/auth/logout');
+            $response->assertStatus(200);
 
-            // Verify token is deleted
+            // Verify token is deleted from database
+            $this->assertEquals(0, $user->fresh()->tokens()->count());
             $this->assertDatabaseMissing('personal_access_tokens', [
                 'tokenable_id' => $user->id,
                 'name' => $deviceName,
